@@ -1,11 +1,12 @@
 import logging
 import threading
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from collector import start_collector
-from storage import get_anomalies, get_events
+from collector import clear_processed_events, start_collector
+from storage import clear_anomalies, clear_events, get_anomalies, get_events
 
 app = FastAPI(title="K8s Event Anomaly Detector", version="0.1.0")
 
@@ -42,10 +43,18 @@ def healthz() -> dict[str, str]:
 
 
 @app.get("/events")
-def events() -> list[dict[str, str]]:
+def events() -> list[dict[str, Any]]:
     return get_events()
 
 
 @app.get("/anomalies")
-def anomalies() -> list[dict[str, str]]:
+def anomalies() -> list[dict[str, Any]]:
     return get_anomalies()
+
+
+@app.post("/clear")
+def clear() -> dict[str, str]:
+    clear_anomalies()
+    clear_events()
+    clear_processed_events()
+    return {"status": "cleared"}

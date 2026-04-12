@@ -41,12 +41,15 @@ Backend API URL: `http://127.0.0.1:8000`
 - `GET /healthz`: health probe
 - `GET /events`: last 100 parsed Kubernetes events
 - `GET /anomalies`: last 50 detected anomalies
+- `POST /clear`: clears in-memory events and anomalies
 
 ### Detection Rules
 
-- `CRITICAL`: event message contains `BackOff` or reason contains `Failed`
+- `CRITICAL`: OOM kill events (`OOMKilled` reason or OOM patterns in message)
+- `CRITICAL`: crash/restart patterns (`back-off`, `backoff`, `crashloop`) in message, or reason contains `Failed`
+- `WARNING`: readiness/health issues (`Unhealthy` reason or `probe failed` in message)
 - `WARNING`: more than 5 recent `ScalingReplicaSet` events in rolling window
-- `INFO`: rolling event buffer has more than 30 events
+- `INFO`: rolling event buffer has more than 40 events
 
 ### Hardening Included
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
 const API_URL = "http://127.0.0.1:8000/anomalies";
+const CLEAR_API_URL = "http://127.0.0.1:8000/clear";
 const POLL_INTERVAL_MS = 3000;
 const SEVERITY_RANK = {
   CRITICAL: 0,
@@ -21,6 +22,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState("");
+  const [clearing, setClearing] = useState(false);
 
   const sortedAnomalies = useMemo(() => {
     return [...anomalies].sort((left, right) => {
@@ -73,6 +75,20 @@ function App() {
     };
   }, []);
 
+  const handleClear = async () => {
+    try {
+      setClearing(true);
+      await axios.post(CLEAR_API_URL, null, { timeout: 2500 });
+      setAnomalies([]);
+      setLastUpdated(new Date().toLocaleTimeString());
+      setError("");
+    } catch (requestError) {
+      setError("Unable to clear in-memory data right now.");
+    } finally {
+      setClearing(false);
+    }
+  };
+
   return (
     <div className="page">
       <div className="glow glow-a" />
@@ -92,6 +108,16 @@ function App() {
           <span className="pill pill-neutral">
             {lastUpdated ? `Updated ${lastUpdated}` : "Waiting for first payload"}
           </span>
+          <button
+            type="button"
+            className="clear-button"
+            onClick={() => {
+              void handleClear();
+            }}
+            disabled={clearing}
+          >
+            {clearing ? "Clearing..." : "Clear Memory"}
+          </button>
         </div>
       </header>
 

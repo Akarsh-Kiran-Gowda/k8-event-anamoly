@@ -27,7 +27,7 @@ def _should_emit(alert_type: str, message: str) -> bool:
     return now - previous >= _DUPLICATE_SUPPRESSION_SECONDS
 
 
-def _emit(alert_type: str, message: str, event_time: str) -> None:
+def _emit(alert_type: str, message: str, event_time: str, source_event: str) -> None:
     if not _should_emit(alert_type, message):
         return
 
@@ -36,6 +36,7 @@ def _emit(alert_type: str, message: str, event_time: str) -> None:
             "type": alert_type,
             "message": message,
             "time": event_time,
+            "source_event": source_event,
         }
     )
 
@@ -46,27 +47,63 @@ def detect(event: dict[str, Any]) -> None:
 
         message = str(event.get("message", ""))
         reason = str(event.get("reason", ""))
+        message_lower = message.lower()
+        reason_lower = reason.lower()
         obj = str(event.get("object", "unknown"))
         event_time = str(event.get("timestamp", ""))
+        source_event = str(event.get("event_id", "unknown"))
 
-        if "BackOff" in message or "Failed" in reason:
+        is_oom_event = (
+            reason_lower == "oomkilled"
+            or "oomkilled" in message_lower
+            or "oom kill" in message_lower
+            or "out of memory" in message_lower
+            or "oom" in message_lower
+        )
+        if is_oom_event:
             _emit(
                 "CRITICAL",
-                f"Crash detected in {obj}",
+                f"OOM Kill detected in {obj}",
                 event_time,
+                source_event,
             )
 
-        deploy_events = [e for e in _recent_events if "ScalingReplicaSet" in str(e.get("reason", ""))]
+        # Catch common crash/restart patterns in event reason/message.
+        if (
+            "back-off" in message_lower
+            or "backoff" in message_lower
+            or "crashloop" in message_lower
+            or "failed" in reason_lower
+        ):
+            _emit(
+                "CRITICAL",
+                f"CrashLoop detected in {obj}",
+                event_time,
+                source_event,
+            )
+        elif "unhealthy" in reason_lower or "probe failed" in message_lower:
+            _emit(
+                "WARNING",
+                f"Health check failing in {obj}",
+                event_time,
+                source_event,
+            )
+
+        deploy_events = [
+            e for e in _recent_events if "scalingreplicaset" in str(e.get("reason", "")).lower()
+        ]
         if len(deploy_events) > 5:
             _emit(
                 "WARNING",
                 "Deployment spike detected",
                 event_time,
+                source_event,
             )
 
-        if len(_recent_events) > 30:
+        if len(_recent_events) > 40:
             _emit(
                 "INFO",
-                "High event rate anomaly",
+                "Unusual high event activity",
                 event_time,
+                source_event,
             )
