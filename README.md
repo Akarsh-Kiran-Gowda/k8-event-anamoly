@@ -42,6 +42,7 @@ Backend API URL: `http://127.0.0.1:8000`
 - `GET /events`: last 100 parsed Kubernetes events
 - `GET /anomalies`: last 50 detected anomalies
 - `POST /clear`: clears in-memory events and anomalies
+- `POST /login`: returns a demo token for `admin/admin`
 
 ### Detection Rules
 
@@ -73,7 +74,14 @@ npm run dev
 
 Frontend URL: `http://127.0.0.1:5173`
 
-The dashboard polls `http://127.0.0.1:8000/anomalies` every 3 seconds and shows severity cards for `CRITICAL`, `WARNING`, and `INFO`.
+Default login: `admin / admin`
+
+The dashboard polls `http://127.0.0.1:8000/anomalies` every 3 seconds using incremental updates (only unseen anomalies are prepended), includes:
+
+- timezone selector (`India`, `US`, `EU`, `Japan`)
+- severity indicators (`CRITICAL`, `WARNING`, `INFO`)
+- auto-scroll toggle
+- clear memory action
 
 ## Quick Smoke Check
 

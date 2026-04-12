@@ -2,13 +2,19 @@ import logging
 import threading
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from collector import clear_processed_events, start_collector
 from storage import clear_anomalies, clear_events, get_anomalies, get_events
 
 app = FastAPI(title="K8s Event Anomaly Detector", version="0.1.0")
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,6 +46,14 @@ def startup() -> None:
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.post("/login")
+def login(user: LoginRequest) -> dict[str, str]:
+    if user.username == "admin" and user.password == "admin":
+        return {"token": "dummy-token"}
+
+    raise HTTPException(status_code=401, detail="invalid")
 
 
 @app.get("/events")
