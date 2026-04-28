@@ -1,5 +1,6 @@
 import logging
 import threading
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -7,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from collector import clear_processed_events, start_collector
+from ml.runtime import get_scorer, start_scorer
 from storage import clear_anomalies, clear_events, get_anomalies, get_events
 
 app = FastAPI(title="K8s Event Anomaly Detector", version="0.1.0")
@@ -42,6 +44,9 @@ def startup() -> None:
     )
     collector_thread.start()
 
+    model_dir = Path(__file__).resolve().parent / "ml" / "models"
+    start_scorer(model_dir)
+
 
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
@@ -72,3 +77,12 @@ def clear() -> dict[str, str]:
     clear_events()
     clear_processed_events()
     return {"status": "cleared"}
+
+
+@app.get("/ml/health")
+def ml_health() -> dict[str, Any]:
+    scorer = get_scorer()
+    if scorer is None:
+        return {"enabled": False}
+
+    return scorer.status()

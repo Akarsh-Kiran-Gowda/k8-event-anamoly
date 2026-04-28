@@ -4,6 +4,7 @@ from time import monotonic
 from typing import Any
 
 from storage import add_anomaly
+from ml.runtime import get_scorer
 
 _recent_events: deque[dict[str, Any]] = deque(maxlen=50)
 _last_alert_time: dict[tuple[str, str], float] = {}
@@ -107,3 +108,7 @@ def detect(event: dict[str, Any]) -> None:
                 event_time,
                 source_event,
             )
+
+        scorer = get_scorer()
+        if scorer is not None:
+            scorer.enqueue(event)

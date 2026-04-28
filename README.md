@@ -43,6 +43,7 @@ Backend API URL: `http://127.0.0.1:8000`
 - `GET /anomalies`: last 50 detected anomalies
 - `POST /clear`: clears in-memory events and anomalies
 - `POST /login`: returns a demo token for `admin/admin`
+- `GET /ml/health`: ML status and last score snapshot
 
 ### Detection Rules
 
@@ -61,6 +62,38 @@ Backend API URL: `http://127.0.0.1:8000`
   - local kubeconfig first
   - in-cluster config second
   - collector stays disabled if neither is available
+
+### ML Detection (Conference-ready Baselines)
+
+This project ships a hybrid ML detector that runs alongside rule-based alerts:
+
+- TF-IDF + IsolationForest (rare event text patterns)
+- N-gram sequence rarity model (rare event sequences)
+
+The ML scorer runs in a background thread and emits anomalies with ML scores, without blocking the rule-based pipeline.
+
+#### Train ML Models
+
+```bash
+cd backend
+python -m ml.train_models --output-dir backend/ml/models
+```
+
+This downloads the dataset from: https://github.com/hkerma/kubernetes-event-dataset
+
+#### Runtime
+
+When model files exist in `backend/ml/models/`, the ML scorer auto-starts on backend startup and emits anomalies with:
+
+- `ml_score`
+- `ml_if_score`
+- `ml_ngram_score`
+
+You can override the ML threshold without retraining:
+
+```bash
+set ML_COMBINED_THRESHOLD=0.55
+```
 
 ## Frontend
 
